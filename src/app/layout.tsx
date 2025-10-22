@@ -2,29 +2,27 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-// Optimized font loading - only weights actually used in the app
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  display: "swap",        // Prevents FOIT, shows fallback immediately
-  preload: true,          // Prioritizes font loading
-  weight: ["400", "700", "900"], // Only Regular, Bold, Black (used in design)
-  fallback: ["system-ui", "arial"], // Fast fallback fonts
+  display: "swap",
+  preload: true,
+  weight: ["400", "700", "900"],
+  fallback: ["system-ui", "arial"],
 });
 
-// Separate viewport export (Next.js 14 best practice)
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 5,        // Allow zoom for accessibility
+  maximumScale: 5,
   themeColor: "#000000",
 };
 
-// Optimized metadata
 export const metadata: Metadata = {
+  metadataBase: new URL('https://nba-parlay-frontend.vercel.app'),
   title: {
     default: "NBA Parlay Analyzer",
-    template: "%s | NBA Parlay Analyzer", // For future pages
+    template: "%s | NBA Parlay Analyzer",
   },
   description: "Statistical analysis for NBA player prop parlays using real game data. Make informed betting decisions with accurate probability calculations.",
   keywords: ["NBA", "parlay", "betting", "analytics", "statistics", "basketball", "sports betting"],
@@ -32,7 +30,6 @@ export const metadata: Metadata = {
   creator: "NBA Parlay Analyzer",
   publisher: "NBA Parlay Analyzer",
   
-  // SEO optimizations
   robots: {
     index: true,
     follow: true,
@@ -45,19 +42,10 @@ export const metadata: Metadata = {
     },
   },
   
-  // Icons
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [
-      { url: "/apple-icon.png" },
-    ],
+    icon: "/favicon.ico",
   },
   
-  // Open Graph for social sharing
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -65,28 +53,14 @@ export const metadata: Metadata = {
     siteName: "NBA Parlay Analyzer",
     title: "NBA Parlay Analyzer - Real Stats, Real Probabilities",
     description: "Statistical analysis for NBA player prop parlays using real game data.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "NBA Parlay Analyzer",
-      },
-    ],
   },
   
-  // Twitter Card
   twitter: {
     card: "summary_large_image",
     title: "NBA Parlay Analyzer",
     description: "Statistical analysis for NBA player prop parlays",
-    images: ["/og-image.png"],
   },
   
-  // Manifest for PWA
-  manifest: "/manifest.json",
-  
-  // Additional metadata
   category: "sports",
 };
 
