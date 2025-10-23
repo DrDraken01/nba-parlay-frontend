@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
+import Image from 'next/image'
 
-// Use environment variable for API URL
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
 interface AnalysisResult {
@@ -23,6 +23,24 @@ interface AnalysisResult {
   }
 }
 
+// NBA player headshot helper
+const getPlayerImageUrl = (playerName: string) => {
+  const cleaned = playerName.toLowerCase().replace(/[^a-z\s]/g, '').trim()
+  const [firstName, ...lastNameParts] = cleaned.split(' ')
+  const lastName = lastNameParts.join('_')
+  return `https://cdn.nba.com/headshots/nba/latest/1040x760/${firstName}_${lastName}.png`
+}
+
+// Determine trend from recent vs season avg
+const getTrend = (recent: number, season: number) => {
+  const diff = recent - season
+  if (diff > 3) return { text: 'VERY HOT', emoji: '🔥🔥', color: 'text-red-500' }
+  if (diff > 1.5) return { text: 'HOT', emoji: '🔥', color: 'text-orange-500' }
+  if (diff < -3) return { text: 'VERY COLD', emoji: '❄️❄️', color: 'text-blue-400' }
+  if (diff < -1.5) return { text: 'COLD', emoji: '❄️', color: 'text-blue-300' }
+  return { text: 'STEADY', emoji: '➡️', color: 'text-gray-400' }
+}
+
 export default function Home() {
   const [player, setPlayer] = useState('')
   const [statType, setStatType] = useState('points')
@@ -31,6 +49,7 @@ export default function Home() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [imageError, setImageError] = useState(false)
 
   const analyze = useCallback(async () => {
     if (!player.trim()) {
@@ -46,6 +65,7 @@ export default function Home() {
     setLoading(true)
     setError('')
     setResult(null)
+    setImageError(false)
 
     try {
       const response = await fetch(`${API_URL}/api/analyze-leg`, {
@@ -85,6 +105,8 @@ export default function Home() {
       setLoading(false)
     }
   }, [player, statType, line, betType])
+
+  const trend = result ? getTrend(result.recent_avg, result.season_avg) : null
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -127,7 +149,7 @@ export default function Home() {
                       value={statType}
                       onChange={(e) => setStatType(e.target.value)}
                       disabled={loading}
-                      className="w-full px-4 md:px-6 py-3 md:py-4 bg-black border-2 border-zinc-800 rounded-xl text-white focus:border-orange-500 focus:outline-none transition-all disabled:opacity-50"
+                      className="w-full px-4 md:px-6 py-3 md:py-4 bg-black border-2 border-zinc-800 rounded-xl text-white focus:border-orange-500 focus:outline-none transition-all disabled:opacity-50 appearance-none cursor-pointer"
                     >
                       <option value="points">PTS</option>
                       <option value="assists">AST</option>
@@ -163,7 +185,7 @@ export default function Home() {
                       disabled={loading}
                       className={`py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition-all disabled:opacity-50 ${
                         betType === 'over'
-                          ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                          ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/30'
                           : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                       }`}
                     >
@@ -174,7 +196,7 @@ export default function Home() {
                       disabled={loading}
                       className={`py-3 md:py-4 rounded-xl font-bold text-base md:text-lg transition-all disabled:opacity-50 ${
                         betType === 'under'
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/30'
                           : 'bg-zinc-800 text-gray-400 hover:bg-zinc-700'
                       }`}
                     >
@@ -188,7 +210,15 @@ export default function Home() {
                   disabled={loading || !player.trim() || !line}
                   className="w-full py-4 md:py-5 bg-gradient-to-r from-orange-500 via-red-500 to-blue-500 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black text-lg md:text-xl rounded-xl transition-all shadow-lg shadow-orange-500/20"
                 >
-                  {loading ? 'ANALYZING...' : 'ANALYZE'}
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      ANALYZING...
+                    </span>
+                  ) : 'ANALYZE'}
                 </button>
               </div>
 
@@ -200,8 +230,35 @@ export default function Home() {
 
               {result && (
                 <div className="border-t border-zinc-800 p-6 md:p-8 space-y-6 bg-gradient-to-b from-transparent to-zinc-900/30">
+                  <div className="flex items-center gap-4 pb-6 border-b border-zinc-800">
+                    <div className="relative w-20 h-20 rounded-full overflow-hidden bg-zinc-800 flex-shrink-0">
+                      {!imageError ? (
+                        <Image
+                          src={getPlayerImageUrl(result.player)}
+                          alt={result.player}
+                          fill
+                          className="object-cover"
+                          onError={() => setImageError(true)}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-3xl font-black text-zinc-600">
+                          {result.player.split(' ').map(n => n[0]).join('')}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-bold text-white">{result.player}</h3>
+                      {trend && (
+                        <p className={`text-sm font-semibold ${trend.color} flex items-center gap-1 mt-1`}>
+                          <span>{trend.emoji}</span>
+                          <span>{trend.text}</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="text-center pb-6 border-b border-zinc-800">
-                    <div className="text-6xl md:text-7xl font-black mb-2 bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent">
+                    <div className="text-6xl md:text-7xl font-black mb-2 bg-gradient-to-r from-orange-400 to-red-500 bg-clip-text text-transparent animate-pulse">
                       {(result.probability * 100).toFixed(1)}%
                     </div>
                     <div className="text-gray-400 text-sm uppercase tracking-widest mb-4">
@@ -219,15 +276,15 @@ export default function Home() {
                   </div>
 
                   <div className="grid grid-cols-3 gap-3 md:gap-4">
-                    <div className="bg-zinc-800/50 p-3 md:p-4 rounded-xl text-center">
+                    <div className="bg-zinc-800/50 p-3 md:p-4 rounded-xl text-center transform hover:scale-105 transition-transform">
                       <div className="text-xl md:text-2xl font-bold text-white mb-1">{result.season_avg}</div>
                       <div className="text-xs text-gray-500 uppercase tracking-wide">Season</div>
                     </div>
-                    <div className="bg-zinc-800/50 p-3 md:p-4 rounded-xl text-center">
+                    <div className="bg-zinc-800/50 p-3 md:p-4 rounded-xl text-center transform hover:scale-105 transition-transform">
                       <div className="text-xl md:text-2xl font-bold text-white mb-1">{result.recent_avg}</div>
                       <div className="text-xs text-gray-500 uppercase tracking-wide">Last 10</div>
                     </div>
-                    <div className="bg-zinc-800/50 p-3 md:p-4 rounded-xl text-center">
+                    <div className="bg-zinc-800/50 p-3 md:p-4 rounded-xl text-center transform hover:scale-105 transition-transform">
                       <div className="text-xl md:text-2xl font-bold text-white mb-1">±{result.season_std?.toFixed(1)}</div>
                       <div className="text-xs text-gray-500 uppercase tracking-wide">StdDev</div>
                     </div>
@@ -238,7 +295,9 @@ export default function Home() {
                       <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">80% Confidence</div>
                       <div className="flex items-center justify-between text-sm">
                         <span className="font-mono text-gray-300">{result.confidence_80[0]}</span>
-                        <div className="flex-1 mx-4 h-1 bg-gradient-to-r from-orange-500 to-blue-500 rounded-full" />
+                        <div className="flex-1 mx-4 h-2 bg-gradient-to-r from-orange-500 via-red-500 to-blue-500 rounded-full relative overflow-hidden">
+                          <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                        </div>
                         <span className="font-mono text-gray-300">{result.confidence_80[1]}</span>
                       </div>
                     </div>
@@ -250,6 +309,7 @@ export default function Home() {
 
           <div className="text-center mt-8 md:mt-12 text-gray-600 text-sm px-4">
             <p>Educational tool. Not financial advice.</p>
+            <p className="mt-2 text-xs">Gambling problem? Call 1-800-GAMBLER</p>
           </div>
         </div>
       </div>
